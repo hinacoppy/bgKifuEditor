@@ -1,0 +1,2 @@
+# bgKifuEditor
+Backgammon Kifu Editor
