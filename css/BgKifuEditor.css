@@ -28,7 +28,8 @@ input{
 }
 
 .header{
-  text-align:center;
+/*  text-align:center;*/
+  padding-left:10vw;
   font-size:2vw;
   font-weight:bold;
 }
@@ -106,10 +107,10 @@ input{
 }
 
 .navbutton{
-  height:6vh;
-  font-size:120%;
+  height:5vh;
+  font-size:100%;
   text-align:left;
-  padding:0 2vw;
+  padding:0 1vw;
 }
 
 #matchlength{

@@ -84,15 +84,15 @@ console.log("downloadKifu", filename1, filename2, filename);
 
     //ゲームごとのヘッダを出力
     replaceandtrim(' Game ' + gamenum);
-    const p2 = untrim(' ' + this.player2 + ' : ' + score2, 38);
+    const p2 = untrim(' ' + this.player2 + ' : ' + score2, 39);
     const p1 =  ' ' + this.player1 + ' : ' + score1;
     replaceandtrim(p2 + p1);
 
     const actionlist = this.parse_xgidlist(xgiddata);
     for (let i = 0; i < actionlist.length; i += 2) {
       let line = ('  ' + Math.trunc(i / 2 + 1) + ') ').slice(-5);
-      line += untrim(actionlist[i], 34);
-      line += untrim((actionlist[i+1] || ''), 34); //データがないかもしれないので対策
+      line += untrim(actionlist[i], 35);
+      line += untrim((actionlist[i+1] || ''), 35); //データがないかもしれないので対策
       replaceandtrim(line);
     }
     replaceandtrim('');
@@ -103,10 +103,12 @@ console.log("downloadKifu", filename1, filename2, filename);
     let doubledflg = false;
     let takedflg = false;
     let action;
+    let offset = 0;
     for (let idx = 0; idx < xgidlist.length; idx++) {
       const xgbf = new Xgid(xgidlist[idx]);
       if (idx == 0 && xgbf.turn == 1) { //自分番から始まるときは空を挟む
         actionlist.push(' ');
+        offset = 1;
       }
 
       const xgafstr = xgidlist[idx + 1] //次のポジションを確認
@@ -122,7 +124,6 @@ console.log("downloadKifu", filename1, filename2, filename);
         doubledflg = true;
         takedflg = (xgbf.cube != xgaf.cube); //Takeするかどうかはここで確認
       } else if (doubledflg == true) { //Take or Drop
-        //action = (xgbf.cubepos == xgbf.turn) ? ' Takes' : ' Drops';
         action = takedflg ? ' Takes' : ' Drops';
       } else { //Error?;
         action = 'ERROR?? no action to push';
@@ -131,19 +132,19 @@ console.log("downloadKifu", filename1, filename2, filename);
     }
 
     //Game End
-    if (doubledflg) {
-      //action = ' Drops'; //まだTake/Dropの判断をしていないときは(＝パスしたときは)
-      //actionlist.push(' Drops');
-      actionlist.push(' '); //Dropのときは空を２つ挟む
-      actionlist.push(' ');
-    } else {
-      actionlist.push(' ');
-      //action = ' '; //Double/Dropでないときは空を挟む(BearOff or Resignのとき)
-    }
-    //actionlist.push(action);
-
     const xglast = new Xgid(xgidlist[xgidlist.length - 1]);
     const scoreinfo = this.getScoreInfo(xglast); //得点情報を編集
+
+    if ((xgidlist.length + offset) % 2 == 0) { //xgidlistのlengthと、初手の手番で調整する
+      actionlist.push(' ');
+    }
+    if (!doubledflg) { //Dropでないときは空を挟む
+      actionlist.push(' ');
+      actionlist.push(' ');
+    }
+    if (xglast.turn == 1) {
+      actionlist.push(' '); //勝者が自分の場合は右側に表示のために空を挟む
+    }
     actionlist.push(scoreinfo);
 
     return actionlist;
@@ -155,8 +156,9 @@ console.log("downloadKifu", filename1, filename2, filename);
     const getscr = Math.max(delta1, delta2);
     const winner = (delta1 > delta2) ? 1 : -1;
     const winnerscr = (winner == 1) ? xglast.get_sc_me() : xglast.get_sc_yu();
-    const scoreinfo = (xglast.matchsc == 0 || winnerscr < xglast.matchsc) ? ' Wins ' + getscr + ' point'
-                                                                          : ' Wins ' + winnerscr + ' point and the match';
+    const notmatched = (xglast.matchsc == 0 || winnerscr < xglast.matchsc);
+    const scoreinfo = notmatched ? ' Wins ' + getscr + ' point'
+                                 : ' Wins ' + winnerscr + ' point and the match';
     return scoreinfo;
   }
 
