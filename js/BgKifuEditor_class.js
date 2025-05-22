@@ -1183,8 +1183,6 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     const cfplayer = this.xgid.getCrawfordPlayer();
     const scr1 = this.globalKifuData[gamenum].score1 + ((cfplayer == +1) ? "*" : "");
     const scr2 = this.globalKifuData[gamenum].score2 + ((cfplayer == -1) ? "*" : "");
-    //const scr1 = this.globalKifuData[gamenum].score1;
-    //const scr2 = this.globalKifuData[gamenum].score2;
     this.score1.text(scr1);
     this.score2.text(scr2);
 console.log("initGame", 0, gamenum);
@@ -1197,6 +1195,7 @@ console.log("initGame", 0, gamenum);
     this.cubeBefore = 1; // =2^0
     this.gameLines = [];
     let gamelineflag = false;
+    let getplayerflag = false;
     let j = 0;
     const gamesourceArray = gamesource.split("\n");
     for (let line of gamesourceArray) {
@@ -1212,12 +1211,14 @@ console.log("Game ", line, j);
         gamelineflag = true;
         continue;
       }
-      if (gamelineflag) {
-        const ary = BgUtil.insertStr(line, 39, ":").split(":");
+      if (gamelineflag && !getplayerflag) {
+        this.separateColumn = this.getSeparateColumn(line);
+        const ary = BgUtil.insertStr(line, this.separateColumn, ":").split(":");
         const player1 = ary[2].trim();
         const player2 = ary[0].trim();
         this.playername = [null, player1, player2];
         gamelineflag = false;
+        getplayerflag = true;
       }
     }
 
@@ -1240,6 +1241,15 @@ console.log("this.globalKifuData.length", this.globalKifuData.length);
     return true; //返り値は使っていない
   }
 
+  getSeparateColumn(line) {
+    const sep1 = line.indexOf("    ") + 1;
+    const ary = BgUtil.insertStr(line, sep1, ":").split(":");
+    const player1 = ary[2].trim();
+    const sep2 = line.indexOf(player1) - 1;　//player1の名前の1文字前
+console.log("getSeparateColumn '"+ line + "'", sep1, player1, sep2);
+    return sep2;
+  }
+
   parseGameData(gamesource, gameNo) {
     const gamesourceArray = gamesource.split("\n");
     const gameObj = gamesourceArray.slice(this.gameLines[gameNo], this.gameLines[gameNo +1]);
@@ -1247,7 +1257,7 @@ console.log("this.globalKifuData.length", this.globalKifuData.length);
     const playernameline = gameObj[0]; // Contains player names and score
 console.log("gameObj.length ", gameObj.length);
 console.log("playernameline ", playernameline);
-    const ary = BgUtil.insertStr(playernameline, 39, ":").split(":");
+    const ary = BgUtil.insertStr(playernameline, this.separateColumn, ":").split(":");
     const scr1 = Number(ary[3].trim());
     const scr2 = Number(ary[1].trim());
     this.score = [null, scr1, scr2];
@@ -1266,8 +1276,10 @@ console.log("gameBlock", blockStart, gameObj.length);
     for (const line of gameBlock) {
       const indexof = line.indexOf(";");
       const pl = indexof >= 0 ? line.substring(0, indexof) : line;
-      plays.push(pl.substring(5, 39)); //6--39
-      plays.push(pl.substring(40));    //40--end
+      const st = line.indexOf(")") + 1;
+//console.log("'" + line + "'", st);
+      plays.push(pl.substring(st, this.separateColumn).trim()); //)の次から
+      plays.push(pl.substring(this.separateColumn +1).trim()); //player1の名前から--end
     }
     const playobject = this.parsePlay(plays, gameNo);
 
