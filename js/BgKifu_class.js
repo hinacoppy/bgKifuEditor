@@ -2,7 +2,8 @@
 'use strict';
 
 class BgKifu {
-  constructor() {
+  constructor(editorModeFlag = false) {
+    this.editorModeFlag = editorModeFlag; //T=bgKifuEditor, F=bgKifuInputTool
     this.clearKifuXgid();
   }
 
@@ -40,8 +41,7 @@ class BgKifu {
     const blob = new Blob([ kifu, xgidlist ], { "type":"text/plain" }); //debug mode
     const downloadanchor = document.getElementById("downloadkifu");
     const filename2 = "kifu_" + this.player1 + "_" + this.player2 + "_" + this.date8 + ".txt";
-    const filename = filename1 ? filename1 : filename2;
-console.log("downloadKifu", filename1, filename2, filename);
+    const filename = this.editorModeFlag ? filename1 : filename2;
     downloadanchor.href = window.URL.createObjectURL(blob);
     downloadanchor.download = filename;
     downloadanchor.click();
@@ -285,20 +285,18 @@ console.log("downloadKifu", filename1, filename2, filename);
         }
       }
       const bff = (bf < 0) ? 0 : bf; //相手駒は数えないで、
-//      const bff = bf;
       if (af > bff) { //駒が増えていれば
         for (let i = 0; i < (af-bff); i++) {
           tolist.push([p, true]);
         }
       }
-        if (bf < 0) {  //元々そこに相手駒があれば
-          hitlist.push(p);
-          if (af == 0) { //ひき逃げのとき
-            frlist.push([p, true]);
-            tolist.push([p, true]);
-          }
+      if (bf < 0) {  //元々そこに相手駒があれば
+        hitlist.push(p);
+        if (af == 0) { //ひき逃げのとき
+          frlist.push([p, true]);
+          tolist.push([p, true]);
         }
-      //}
+      }
     }
     const boff = frlist.length - tolist.length; //前後の駒数が合わない分はベアオフ
     for (let i = 0; i < boff; i++) {
@@ -395,21 +393,22 @@ console.log("downloadKifu", filename1, filename2, filename);
   }
 
   makeHeader() {
-    /************ 棋譜エディタではヘッダ情報は記録しない *************
-    this.kifumat.push('; [Site "' + this.site + '"]');
-    this.kifumat.push('; [Match ID ""]');
-    this.kifumat.push('; [Player 1 "' + this.player1 + '"]');
-    this.kifumat.push('; [Player 2 "' + this.player2 + '"]');
-    this.kifumat.push('; [Player 1 Elo "1600.00/0"]');
-    this.kifumat.push('; [Player 2 Elo "1600.00/0"]');
-    this.kifumat.push('; [EventDate "' + this.date + '"]');
-    this.kifumat.push('; [EventTime "00:00"]');
-    this.kifumat.push('; [Variation "Backgammon"]');
-    this.kifumat.push('; [Unrated "Off"]');
-    this.kifumat.push('; [Crawford "On"]');
-    this.kifumat.push('; [CubeLimit "1024"]');
-    this.kifumat.push('');
-    *******************************************************************/
+    if (!this.editorModeFlag) {
+      // 棋譜エディタではヘッダ情報は記録しない
+      this.kifumat.push('; [Site "' + this.site + '"]');
+      this.kifumat.push('; [Match ID ""]');
+      this.kifumat.push('; [Player 1 "' + this.player1 + '"]');
+      this.kifumat.push('; [Player 2 "' + this.player2 + '"]');
+      this.kifumat.push('; [Player 1 Elo "1600.00/0"]');
+      this.kifumat.push('; [Player 2 Elo "1600.00/0"]');
+      this.kifumat.push('; [EventDate "' + this.date + '"]');
+      this.kifumat.push('; [EventTime "00:00"]');
+      this.kifumat.push('; [Variation "Backgammon"]');
+      this.kifumat.push('; [Unrated "Off"]');
+      this.kifumat.push('; [Crawford "On"]');
+      this.kifumat.push('; [CubeLimit "1024"]');
+      this.kifumat.push('');
+    }
     const matchlengthinfo = this.matchlen == 0 ? 'unlimited game' : this.matchlen + ' point match';
     //★実際のunlimitedのMATファイルを確認すること★
     this.kifumat.push(matchlengthinfo);
@@ -417,12 +416,21 @@ console.log("downloadKifu", filename1, filename2, filename);
   }
 
   setGameOption() {
-    this.site     = document.getElementById("site").value;
-    this.date     = document.getElementById("date").value;
+   if (this.editorModeFlag) {
+    //this.site     = document.getElementById("site").value;
+    //this.date     = document.getElementById("date").value;
     this.player1  = document.getElementById("player1").textContent;
     this.player2  = document.getElementById("player2").textContent;
     this.matchlen = document.getElementById("matchlen1").textContent;
     this.date8    = this.date.replace(/\//g, ""); //2023/05/17 -> 20230517
+   } else {
+    this.site     = document.getElementById("site").value;
+    this.date     = document.getElementById("date").value;
+    this.player1  = document.getElementById("player1").value;
+    this.player2  = document.getElementById("player2").value;
+    this.matchlen = document.getElementById("matchlen").value;
+    this.date8    = this.date.replace(/\//g, ""); //2023/05/17 -> 20230517
+   }
   }
 
   getActionStr(xgidbf, xgidaf) {
