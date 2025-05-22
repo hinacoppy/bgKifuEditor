@@ -417,8 +417,8 @@ class BgKifu {
 
   setGameOption() {
    if (this.editorModeFlag) {
-    //this.site     = document.getElementById("site").value;
-    //this.date     = document.getElementById("date").value;
+    this.site     = document.getElementById("site").value;
+    this.date     = document.getElementById("date").value;
     this.player1  = document.getElementById("player1").textContent;
     this.player2  = document.getElementById("player2").textContent;
     this.matchlen = document.getElementById("matchlen1").textContent;
