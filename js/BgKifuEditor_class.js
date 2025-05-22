@@ -78,11 +78,10 @@ class BgKifuEditor {
 
     //kifu input
     this.kifuTable      = $("#kifuTable");
-    this.localKifuBtn   = $("#localKifuFile");
+    this.inputKifuFile  = $("#inputKifuFile");
     this.gameSelect     = $("#gameSelect");
-    //this.resignSelect   = $("input[name='resign']:eq(0)");
-    //this.gamesource     = $("#gamesource");
-    //this.gamescript     = $("#gamescript");
+    this.fileName       = $("#fileName");
+    this.DnDArea        = $("#DnDArea");
     this.prevPlayBtn    = $("#prevPlayBtn");
     this.nextPlayBtn    = $("#nextPlayBtn");
     this.goGameBtn      = $("#gameGoBtn");
@@ -1064,24 +1063,42 @@ console.log("parseGameKifu()");
   }
 
   setEventHandlerForKifuViewer() {
+    this.goGameBtn.on("click", () => {
+      this.jumpToGame();
+    });
     this.kifuTable.on("check.bs.table", (e, row, elem) => {
 console.log("this.kifuTable on check", row.no, row);
       this.curRollNo = row.no -1;
       this.setIntoViewerMode();
     });
-    this.nextPlayBtn. on("click", () => {
+    this.nextPlayBtn.on("click", () => {
       this.curRollNo = this.calcCurrentRoll(+1);
       this.setIntoViewerMode();
     });
-    this.prevPlayBtn. on("click", () => {
+    this.prevPlayBtn.on("click", () => {
       this.curRollNo = this.calcCurrentRoll(-1);
       this.setIntoViewerMode();
     });
-    this.goGameBtn.   on("click", () => { this.jumpToGame(); });
-    this.localKifuBtn.  on("change", (e) => {
-console.log("localKifuBtn", this.localKifuBtn.val());
+    this.inputKifuFile.on("change", (e) => {
+console.log("inputKifuFile", this.inputKifuFile.val());
       this.loadLocalKifu(e);
-      //this.localKifuBtn.val("");
+      this.inputKifuFile.val("");
+    });
+    this.DnDArea.on("dragover", (e) => {
+      e.preventDefault();
+      this.DnDArea.addClass("DnDAreaDragOver");
+    });
+    this.DnDArea.on("dragleave", (e) => {
+      this.DnDArea.removeClass("DnDAreaDragOver");
+    });
+    this.DnDArea.on("drop", (e) => {
+      e.preventDefault();
+      this.DnDArea.removeClass("DnDAreaDragOver");
+      const files = e.originalEvent.dataTransfer.files;
+      if (files.length > 0) {
+        this.inputKifuFile.prop("files", files);
+        this.inputKifuFile.trigger("change");
+      }
     });
   }
 
@@ -1138,11 +1155,15 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     if (!file) { return; }
     this.kifuFileName = file.name;
     this.readKifuFile(file);
+    this.fileName.html(this.reduceFileName(this.kifuFileName));
+  }
+
+  reduceFileName(filename) { //長すぎるときは改行を入れる
+    const outfile = (filename.length < 30) ? filename : BgUtil.insertStr(filename, 30, "<br>");
+    return outfile;
   }
 
   readKifuFile(file) {
-//    this.kifuDnDArea.text(this.trimFilename(file.name)); //D&Dのファイル選択もやりたいな★
-
     const reader = new FileReader();
     reader.readAsText(file); //テキスト形式で読み込む
 
@@ -1245,7 +1266,7 @@ console.log("this.globalKifuData.length", this.globalKifuData.length);
     const sep1 = line.indexOf("    ") + 1;
     const ary = BgUtil.insertStr(line, sep1, ":").split(":");
     const player1 = ary[2].trim();
-    const sep2 = line.indexOf(player1) - 1;　//player1の名前の1文字前
+    const sep2 = line.indexOf(player1) - 2;　//player1の名前の2文字前(tsuneさんの棋譜エディタの出力に対応)
 console.log("getSeparateColumn '"+ line + "'", sep1, player1, sep2);
     return sep2;
   }

@@ -127,6 +127,23 @@ input{
   white-space:nowrap;
 }
 
+.DnDArea{
+  margin:auto;
+  width:100%;
+  height:50px;
+  position:relative;
+}
+.DnDAreaDragOver{
+  background-color:#bef;
+}
+.DnDArea #inputKifuFile {
+  top:0;
+  left:0;
+  opacity:0; /* <input type=file>のボタンを見せないようにする */
+  position:absolute;
+  width:100%;
+  height:100%;
+}
 /* oparation button decorations ------------------------------------- */
 .oparationbtn{
   --bg-color:#bef;

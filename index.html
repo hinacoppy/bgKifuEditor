@@ -43,7 +43,12 @@
     <button id="closeNavBtn" style="display:none;">X</button>
   </div>
 <table id="panelNavBody" class="nav modalBody">
-<tr><td colspan="2"><input type="file" id="localKifuFile"></td></tr>
+<tr><td colspan="2">
+<button id="DnDArea" class="DnDArea">
+<input type="file" id="inputKifuFile">
+<div id="fileName">ファイルを選択</div>
+</button>
+</td></tr>
 <tr><td>Select game:</td>
     <td><select id="gameSelect" class="jumpselect"></select>
         <button id="gameGoBtn" class="normalbutton"><i class="fas fa-share"></i></button></td></tr>
@@ -107,8 +112,6 @@
 </section>
 
 <aside class="aside" style="display:none">
-<textarea id="gamesource" cols="70" rows="20"></textarea>
-<textarea id="gamescript" cols="70" rows="20"></textarea>
 <p id="actiondisp" class="infodisp">&nbsp;</p>
 Site:<input id="site" type="text" value="input event name">
 Date:<input id="date" type="date" value="2023-05-09">
