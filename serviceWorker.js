@@ -2,7 +2,7 @@
 // (参考) https://developer.mozilla.org/ja/docs/Web/Progressive_web_apps/Offline_Service_workers
 'use strict';
 
-const cacheName = 'bgKifuViewer-v20251517';
+const cacheName = 'bgKifuViewer-v20251530';
 const ORIGIN = (location.hostname == 'localhost') ? '' : location.protocol + '//' + location.hostname;
 
 const contentToCache = [
@@ -15,10 +15,12 @@ const contentToCache = [
   ORIGIN + '/bgKifuEditor/icon/android-chrome-192x192.png',
   ORIGIN + '/bgKifuEditor/icon/android-chrome-512x512.png',
   ORIGIN + '/bgKifuEditor/css/BgKifuEditor.css',
+  ORIGIN + '/bgKifuEditor/css/bootstrap.inuse.css',
   ORIGIN + '/bgKifuEditor/js/BgMoveStrUtil_class.js',
   ORIGIN + '/bgKifuEditor/js/BgKfInputBoard_class.js',
   ORIGIN + '/bgKifuEditor/js/BgKifu_class.js',
   ORIGIN + '/bgKifuEditor/js/BgKifuEditor_class.js',
+  ORIGIN + '/bgKifuEditor/js/BgKifuParser_class.js',
   ORIGIN + '/bgKifuEditor/js/BgMoveStrUtil_class.js',
   ORIGIN + '/css/font-awesome-animation.min.css',
   ORIGIN + '/css/bgStaticBoard.css',

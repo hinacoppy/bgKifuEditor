@@ -14,7 +14,7 @@ class BgKifuEditor {
     this.xgid = new Xgid(null);
     this.board = new BgBoard("#board", false);
     this.board.showBoard2(this.xgid);
-    this.kifuobj = new BgKifu();
+    this.kifuobj = new BgKifu(true);
     this.player = true; //true=player1, false=player2
     this.strictflg = true;
     this.animDelay = 500; //cube, dice
@@ -907,8 +907,8 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
       search: false,
       clickToSelect: true,
       singleSelect: true,
-      uniqueId: "id",
       height: "200",
+      //widthUnit: "rem",
     };
     return tableOptions;
   }
@@ -923,18 +923,23 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
     const columns = [
       { field: "check",
         checkbox: true,
+        //width: "1",
       },
       { title: "No",
         field: "no",
+        //width: "1",
       },
       { title: "Player",
         field: "player",
+        //width: "4",
       },
       { title: "Dice",
         field: "dice",
+        //width: "3",
       },
       { title: "Action",
         field: "action",
+        //width: "50",
       },
       { title: "Edit",
         events: operateEvents,
@@ -960,7 +965,6 @@ console.log("execEditButtonAction ", index, row);
     case "roll":
       this.xgid.dice = "00";
       this.showBoard2(this.xgid);
-  console.log("editCurrentPosition", mode, this.xgid.xgidstr);
       this.unsetChequerDraggable();
       this.hideAllPanel();
       this.showRollDoublePanel(this.player);
@@ -997,7 +1001,7 @@ console.log("setGlobalKifuData", newPlayObj);
       this.globalKifuData[gameno].playObject[playno] = newPlayObj;
       this.updateKifuTable(newPlayObj);
     } else {
-      this.globalKifuData[gameno].playObject.push(newPlayObj);
+      this.globalKifuData[gameno].playObject.push(newPlayObj); //行が増えたときは
       this.makeTableData(); //テーブルデータを作り直してテーブル再表示
     }
 
@@ -1006,7 +1010,7 @@ console.log("setGlobalKifuData", newPlayObj);
     this.globalKifuData[gameno].playObject[playno +1].bfxgid = afterxgid;
 
     if (mode != "gameend") {
-      this.curRollNo += 1; //次の行
+      this.curRollNo += 1; //gameendのときは次行に行かない
     }
     this.checkOnKifuRow(this.curRollNo);
   }
@@ -1031,8 +1035,10 @@ console.log("setGlobalKifuData", newPlayObj);
 
   checkOnKifuRow(index) {
     const check = { index: this.curRollNo, field: "check", value: true, };
+    const scrollto = { unit: "rows", value: Math.max(this.curRollNo - 1, 0) };
     this.kifuTable.bootstrapTable("uncheckAll");
     this.kifuTable.bootstrapTable("updateCell", check);
+    //this.kifuTable.bootstrapTable("scrollTo", scrollto); //行選択時に直感的な動きをしないので使いにくい
   }
 
   makeTableData() {
@@ -1082,7 +1088,7 @@ console.log("this.kifuTable on check", row.no, row);
     this.inputKifuFile.on("change", (e) => {
 console.log("inputKifuFile", this.inputKifuFile.val());
       this.loadLocalKifu(e);
-      this.inputKifuFile.val("");
+      this.inputKifuFile.val(""); //同じファイルを選択できるように
     });
     this.DnDArea.on("dragover", (e) => {
       e.preventDefault();
@@ -1097,7 +1103,7 @@ console.log("inputKifuFile", this.inputKifuFile.val());
       const files = e.originalEvent.dataTransfer.files;
       if (files.length > 0) {
         this.inputKifuFile.prop("files", files);
-        this.inputKifuFile.trigger("change");
+        this.inputKifuFile.trigger("change"); //ドロップしたらinputタグのchangeイベントを発火
       }
     });
   }
@@ -1155,12 +1161,12 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     if (!file) { return; }
     this.kifuFileName = file.name;
     this.readKifuFile(file);
-    this.fileName.html(this.reduceFileName(this.kifuFileName));
+    this.dispFileName(this.kifuFileName);
   }
 
-  reduceFileName(filename) { //長すぎるときは改行を入れる
-    const outfile = (filename.length < 30) ? filename : BgUtil.insertStr(filename, 30, "<br>");
-    return outfile;
+  dispFileName(filename) {
+    const dispfile = (filename.length < 30) ? filename : BgUtil.insertStr(filename, 30, "<br>"); //長すぎるときは改行を入れる
+    this.fileName.html(dispfile);
   }
 
   readKifuFile(file) {
@@ -1170,8 +1176,7 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     //読込終了後の処理
     reader.onload = () => { //アロー関数で記述すれば、thisがそのまま使える
       const kifudata = reader.result;
-      //this.gamesource.val(kifudata); //テキストエリアに置いておく（使わないけど）
-      this.parseKifuDataAll(kifudata); //棋譜ファイルを読んでデータ(オブジェクト)作成
+      this.globalKifuData = new BgKifuParser(this, kifudata); //棋譜ファイルを読んでデータ(オブジェクト)作成
       this.setGameSelection(); //selectタグデータ作成
       this.makeTableData(); //棋譜テーブル作成
       this.curGameNo = 0;
@@ -1194,7 +1199,7 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
 
   initGame(gamenum) {
     this.curRollNo = 0;
-    this.kifuTable.bootstrapTable("filterBy", {gameno: [gamenum]});
+    this.kifuTable.bootstrapTable("filterBy", {gameno: [gamenum]}); //棋譜テーブルで見せるデータを入替え
     this.setIntoViewerMode(); //ここでボード表示もやる
 
     this.player1.text(this.playername[1]);
@@ -1207,264 +1212,6 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     this.score1.text(scr1);
     this.score2.text(scr2);
 console.log("initGame", 0, gamenum);
-  }
-
-  parseKifuDataAll(gamesource) {
-    this.globalKifuData = [];
-    this.gameCount = 0;
-    this.crawford = false;
-    this.cubeBefore = 1; // =2^0
-    this.gameLines = [];
-    let gamelineflag = false;
-    let getplayerflag = false;
-    let j = 0;
-    const gamesourceArray = gamesource.split("\n");
-    for (let line of gamesourceArray) {
-      j++;
-      const linetrim = line.trim();
-      if (linetrim.match(/point match/)) {
-        this.matchLength = linetrim.substr(0, linetrim.indexOf(" "));
-      }
-      if (line.substr(0,6) == " Game ") {
-        this.gameCount += 1;
-console.log("Game ", line, j);
-        this.gameLines.push(j);
-        gamelineflag = true;
-        continue;
-      }
-      if (gamelineflag && !getplayerflag) {
-        this.separateColumn = this.getSeparateColumn(line);
-        const ary = BgUtil.insertStr(line, this.separateColumn, ":").split(":");
-        const player1 = ary[2].trim();
-        const player2 = ary[0].trim();
-        this.playername = [null, player1, player2];
-        gamelineflag = false;
-        getplayerflag = true;
-      }
-    }
-
-    if (this.gameCount === 0) {
-      alert("Error in parseMatchData - no 'Game' lines in file")
-      return false;
-    }
-
-console.log("gameCount", this.gameCount);
-    for (let game = 0; game < this.gameCount; game++) {
-      const gameobj = this.parseGameData(gamesource, game);
-      if (gameobj === false) {
-        alert("Error in parseGameData - no gameplay lines");
-        return false;
-      }
-      this.globalKifuData.push(gameobj);
-    }
-console.log("this.globalKifuData", JSON.stringify(this.globalKifuData));
-console.log("this.globalKifuData.length", this.globalKifuData.length);
-    return true; //返り値は使っていない
-  }
-
-  getSeparateColumn(line) {
-    const sep1 = line.indexOf("    ") + 1;
-    const ary = BgUtil.insertStr(line, sep1, ":").split(":");
-    const player1 = ary[2].trim();
-    const sep2 = line.indexOf(player1) - 2;　//player1の名前の2文字前(tsuneさんの棋譜エディタの出力に対応)
-console.log("getSeparateColumn '"+ line + "'", sep1, player1, sep2);
-    return sep2;
-  }
-
-  parseGameData(gamesource, gameNo) {
-    const gamesourceArray = gamesource.split("\n");
-    const gameObj = gamesourceArray.slice(this.gameLines[gameNo], this.gameLines[gameNo +1]);
-
-    const playernameline = gameObj[0]; // Contains player names and score
-console.log("gameObj.length ", gameObj.length);
-console.log("playernameline ", playernameline);
-    const ary = BgUtil.insertStr(playernameline, this.separateColumn, ":").split(":");
-    const scr1 = Number(ary[3].trim());
-    const scr2 = Number(ary[1].trim());
-    this.score = [null, scr1, scr2];
-
-    let gameobject = { game: gameNo, score1: scr1, score2: scr2, };
-
-    const blockStart = BgUtil.findLine(gameObj, "1)");
-    if (blockStart < 0) {
-      return false;
-    }
-
-    // Now create serialised plays array
-    const gameBlock = gameObj.slice(blockStart, gameObj.length - 1);
-console.log("gameBlock", blockStart, gameObj.length);
-    let plays = [];
-    for (const line of gameBlock) {
-      const indexof = line.indexOf(";");
-      const pl = indexof >= 0 ? line.substring(0, indexof) : line;
-      const st = line.indexOf(")") + 1;
-//console.log("'" + line + "'", st);
-      plays.push(pl.substring(st, this.separateColumn).trim()); //)の次から
-      plays.push(pl.substring(this.separateColumn +1).trim()); //player1の名前から--end
-    }
-    const playobject = this.parsePlay(plays, gameNo);
-
-    gameobject["playObject"] = playobject;
-    return gameobject;
-  }
-
-  parsePlay(plays, gameno) {
-    // Now generate the script from the plays[] elements
-    let e, s1, s2, dc, mv, af, xg, po, ac, mode;
-
-    let bf = this.firstXgid();
-    let playObject = []; //init _playObject
-
-    let i = 0;
-    for (const k of plays) {
-      const j = (i % 2 == 0) ? 1 : 2;  //bottom side = 2, top side = 1
-
-      switch( this.chkAction(k) ) {
-      case "ROLL":
-        mode = "roll";
-        e = k.indexOf(":");
-        dc = k.substr(e-2,2);
-        mv = k.substr(e+1).trim();
-        if (mv == "") { mv = "????"; }
-        xg = this.nextXgid(bf, j, mode, dc, "", 0); // ロール後(ムーブ前)のXGIDを計算する(解析(move action)に渡す用)
-        af = this.nextXgid(bf, j, "move", dc, mv, 0); // ムーブ後のXGIDを計算する(画面表示用)
-        ac = mv;
-        po = this.makePlayObj(j, mode, dc, mv, 0, xg, af, ac, gameno);
-        break;
-      case "DOUBLE":
-        mode = "offer";
-        s1 = k.trim();
-        s2 = parseInt(s1.substr(s1.lastIndexOf(" ")));
-        xg = this.nextXgid(bf, j, mode, "00", "", this.cubeBefore); //解析(cube action)に渡す用
-        af = this.nextXgid(bf, j, mode, "D", "", s2); //画面表示用
-        ac = " Doubles => " + s2;
-        po = this.makePlayObj(j, mode, "D", "", s2, xg, af, ac, gameno);
-        break;
-      case "TAKE":
-        mode = "take";
-        af = xg = this.nextXgid(bf, j, mode, "00", "", s2);
-        ac = " Takes";
-        po = this.makePlayObj(j, mode, "00", "", s2, xg, af, ac, gameno);
-        this.cubeBefore = s2;
-        break;
-      case "DROP":
-        mode = "drop";
-        af = xg = this.nextXgid(bf, j, mode, "00", "", this.cubeBefore, true);
-        ac = " Drops";
-        po = this.makePlayObj(j, mode, "00", "", 0, xg, af, ac, gameno);
-        break;
-      case "OTHER":
-        const dropflag = (mode == "drop"); //ここに来る直前のmodeを確認
-        mode = "gameend";
-        this.cubeBefore = 1; // =2^0
-        af = xg = this.nextXgid(bf, j, mode, "00", "", 0, dropflag);
-        const xgtmp = new Xgid(xg);
-        //const sc = BgUtil.calcCubeVal(xgtmp.cube); // 3 => 8
-        const sc = this.calcGamesetScore(dropflag, xgtmp);
-        ac = "wins " + sc + " point";
-        po = this.makePlayObj(j, mode, "00", "", 0, xg, af, ac, gameno);
-        break;
-      default: // "NULL"
-        ac = "";
-        break;
-      }
-      if (ac != "") {
-         bf = af; //change XGID for next turn
-         playObject.push(po);
-      }
-      i++;
-    }
-    return playObject;
-  }
-
-  makePlayObj(tn, mode, dc, mv, cb, xg, af, disp, gameno) {
-    const playobj = {
-      "turn": tn,
-      "mode": mode,
-      "dice": dc,
-      "cube": cb,
-      "move": mv,
-      "bfxgid": xg,
-      "xgid": af,
-      "disp": disp,
-      "gameno": gameno,
-    };
-    return playobj;
-  }
-
-  chkAction(play) {
-    const p = play.toLowerCase()
-    if (BgUtil.isContain(p,""))       { return "NULL"; }
-    if (BgUtil.isContain(p,":"))      { return "ROLL"; }
-    if (BgUtil.isContain(p,"double")) { return "DOUBLE"; }
-    if (BgUtil.isContain(p,"take"))   { return "TAKE"; }
-    if (BgUtil.isContain(p,"drop"))   { return "DROP"; }
-//console.log("chkAction OTHER", play, p);
-    return "OTHER";
-  }
-
-  firstXgid() {
-    const xgid = new Xgid();
-    xgid.position = "-b----E-C---eE---c-e----B-";
-    xgid.dice = "00";
-    xgid.cube = xgid.cubepos = xgid.turn = 0;
-    xgid.crawford = this.crawford;
-    xgid.sc_me = this.score[1];
-    xgid.sc_yu = this.score[2];
-    xgid.matchsc = this.matchLength;
-    return xgid.xgidstr;
-  }
-
-  nextXgid(bf, tn, ac, dc, mv, cb, dropflag = false) {
-    const xgid = new Xgid(bf);
-    xgid.turn = BgUtil.cvtTurnKv2xg(tn); //tn==1 -> xgid.turn = -1, tn==2 -> xgid.turn = 1
-    switch (ac) {
-    case "roll":
-      xgid.dice = dc;
-      break;
-    case "move":
-      xgid.dice = dc;
-      xgid.position = xgid.getMovedPosition(xgid.position, mv, xgid.turn);
-      break;
-    case "offer":
-      xgid.cube = BgUtil.calcCubeValRev(cb); // 8 => 3
-      xgid.cubepos = BgUtil.cvtTurnKv2xg(BgUtil.getBdOppo(tn));
-      xgid.dbloffer = true;
-      break;
-    case "take":
-      xgid.dbloffer = false;
-      break;
-    case "drop":
-      xgid.cube = BgUtil.calcCubeValRev(cb); // 8 => 3
-      xgid.dbloffer = false;
-      break;
-    case "gameend":
-      const mode = "gameend";
-      //const cubevalue = BgUtil.calcCubeVal(cb); // 3 => 8
-      const sc = this.calcGamesetScore(dropflag, xgid)
-      const winnerscr = (tn == 2) ? xgid.sc_me : xgid.sc_yu;
-      const loserscr  = (tn == 2) ? xgid.sc_yu : xgid.sc_me;
-      this.crawford = xgid.checkCrawford(winnerscr, sc, loserscr);
-      xgid.dice = "00";
-      if (tn == 2) { xgid.sc_me = xgid.sc_me + sc; }
-      else         { xgid.sc_yu = xgid.sc_yu + sc; }
-      break;
-    default:
-      break;
-    }
-    return xgid.xgidstr;
-  }
-
-  calcGamesetScore(dropflag, xgid) {
-    const dice = xgid.dice;
-    const cubevalue = BgUtil.calcCubeVal(xgid.cube); // 3 => 8
-    const xgscr1 = xgid.get_gamesc(1); //me
-    const xgscr2 = xgid.get_gamesc(-1); //yu
-    const xgscoreme = xgscr1[0] * xgscr1[1];
-    const xgscoreyu = xgscr2[0] * xgscr2[1];
-    const score = dropflag ? cubevalue : Math.max(xgscoreme, xgscoreyu);
-//console.log("gameend", dropflag, dice, cubevalue, xgscr1, xgscr2, xgscoreme, xgscoreyu, score, xgid.xgidstr);
-    return score
   }
 
 }
