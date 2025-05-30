@@ -15,6 +15,7 @@ class BgKifuEditor {
     this.board = new BgBoard("#board", false);
     this.board.showBoard2(this.xgid);
     this.kifuobj = new BgKifu(true);
+    this.kifuParser = new BgKifuParser(this);
     this.player = true; //true=player1, false=player2
     this.strictflg = true;
     this.animDelay = 500; //cube, dice
@@ -993,7 +994,7 @@ console.log("setGlobalKifuData", xgid.xgidstr, action, mode);
     const turn = BgUtil.cvtTurnXg2kv(xgid.turn);
     const dice = xgid.dice;
     const cube = xgid.cube;
-    const newPlayObj = this.makePlayObj(turn, mode, dice, action, cube, xgidstr, xgidstr, action, gameno);
+    const newPlayObj = this.kifuParser.makePlayObj(turn, mode, dice, action, cube, xgidstr, xgidstr, action, gameno);
 
 console.log("setGlobalKifuData", this.globalKifuData[gameno].playObject.length, playno);
 console.log("setGlobalKifuData", newPlayObj);
@@ -1176,7 +1177,7 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     //読込終了後の処理
     reader.onload = () => { //アロー関数で記述すれば、thisがそのまま使える
       const kifudata = reader.result;
-      this.globalKifuData = new BgKifuParser(this, kifudata); //棋譜ファイルを読んでデータ(オブジェクト)作成
+      this.globalKifuData = this.kifuParser.parseKifuDataAll(kifudata); //棋譜ファイルを読んでデータ(オブジェクト)作成
       this.setGameSelection(); //selectタグデータ作成
       this.makeTableData(); //棋譜テーブル作成
       this.curGameNo = 0;

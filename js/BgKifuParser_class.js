@@ -2,24 +2,28 @@
 "use strict";
 
 class BgKifuParser {
-  constructor(kifuEditor, gamesource) {
-//console.log("constructor", kifuEditor, gamesource);
+  constructor(kifuEditor) {
     this.kifuEditor = kifuEditor;
-    this.globalKifuData = [];
+  }
+
+  parseKifuDataAll(gamesource) {
+//console.log("parseKifuDataAll", gamesource);
     this.crawford = false;
     this.cubeBefore = 1; // =2^0
     this.gameLines = [];
+    let globalKifudata = [];
     let gamelineflag = false;
     let getplayerflag = false;
     let gameCount = 0;
     let lineno = 0;
+    let playername = [null, "top", "bottom"];
+
     const gamesourceArray = gamesource.split("\n");
     for (const line of gamesourceArray) {
       lineno += 1;
       const linetrim = line.trim();
       if (linetrim.match(/point match/)) {
-        //this.matchLength = linetrim.substr(0, linetrim.indexOf(" "));
-        this.matchLength = Number(linetrim.substring(0, linetrim.indexOf(" ")));
+        this.kifuEditor.matchLength = Number(linetrim.substring(0, linetrim.indexOf(" ")));
       }
       if (line.substring(0, 6) == " Game ") {
         gameCount += 1;
@@ -33,7 +37,7 @@ console.log("Game ", line, lineno);
         const ary = BgUtil.insertStr(line, this.separateColumn, ":").split(":");
         const player1 = ary[2].trim();
         const player2 = ary[0].trim();
-        this.kifuEditor.playername = [null, player1, player2]; //上位オブジェクトの変数に登録
+        playername = [null, player1, player2];
         gamelineflag = false;
         getplayerflag = true;
       }
@@ -51,12 +55,13 @@ console.log("gameCount", gameCount);
         alert("Error in parseGameData - no gameplay lines");
         return false;
       }
-      this.globalKifuData.push(gameobj);
+      globalKifudata.push(gameobj);
     }
-console.log("this.globalKifuData", JSON.stringify(this.globalKifuData));
-console.log("this.globalKifuData.length", this.globalKifuData.length);
-    this.kifuEditor.gameCount = gameCount; //上位オブジェクトの変数に登録
-    return this.globalKifuData;
+console.log("globalKifudata", JSON.stringify(globalKifudata));
+console.log("globalKifudata.length", globalKifudata.length);
+    this.kifuEditor.playername = playername; //上位オブジェクトの変数に登録
+    this.kifuEditor.gameCount = gameCount;
+    return globalKifudata;
   }
 
   getSeparateColumn(line) {
@@ -78,7 +83,7 @@ console.log("playernameline ", playernameline);
     const ary = BgUtil.insertStr(playernameline, this.separateColumn, ":").split(":");
     const scr1 = Number(ary[3].trim());
     const scr2 = Number(ary[1].trim());
-    this.score = [null, scr1, scr2];
+    this.kifuEditor.score = [null, scr1, scr2]; //上位オブジェクトの変数に登録
 
     let gameobject = { game: gameNo, score1: scr1, score2: scr2, };
 
@@ -204,9 +209,10 @@ console.log("gameBlock", blockStart, gameObj.length);
     xgid.dice = "00";
     xgid.cube = xgid.cubepos = xgid.turn = 0;
     xgid.crawford = this.crawford;
-    xgid.sc_me = this.score[1];
-    xgid.sc_yu = this.score[2];
-    xgid.matchsc = this.matchLength;
+    xgid.sc_me = this.kifuEditor.score[1];
+    xgid.sc_yu = this.kifuEditor.score[2];
+    xgid.matchsc = this.kifuEditor.matchLength;
+console.log("firstXgid", xgid.xgidstr);
     return xgid.xgidstr;
   }
 
