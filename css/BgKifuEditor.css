@@ -195,3 +195,7 @@ input{
 .modalBody{
   padding:0;
 }
+.modalTitle{
+  white-space:nowrap; /* ボタンで折り返さない */
+  min-width:100%;
+}

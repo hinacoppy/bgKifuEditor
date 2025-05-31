@@ -7,7 +7,6 @@ class BgKifuParser {
   }
 
   parseKifuDataAll(gamesource) {
-//console.log("parseKifuDataAll", gamesource);
     this.crawford = false;
     this.cubeBefore = 1; // =2^0
     this.gameLines = [];
@@ -83,8 +82,8 @@ console.log("playernameline ", playernameline);
     const ary = BgUtil.insertStr(playernameline, this.separateColumn, ":").split(":");
     const scr1 = Number(ary[3].trim());
     const scr2 = Number(ary[1].trim());
-    this.kifuEditor.score = [null, scr1, scr2]; //上位オブジェクトの変数に登録
 
+    this.score = [null, scr1, scr2];
     let gameobject = { game: gameNo, score1: scr1, score2: scr2, };
 
     const blockStart = BgUtil.findLine(gameObj, "1)");
@@ -209,10 +208,9 @@ console.log("gameBlock", blockStart, gameObj.length);
     xgid.dice = "00";
     xgid.cube = xgid.cubepos = xgid.turn = 0;
     xgid.crawford = this.crawford;
-    xgid.sc_me = this.kifuEditor.score[1];
-    xgid.sc_yu = this.kifuEditor.score[2];
+    xgid.sc_me = this.score[1];
+    xgid.sc_yu = this.score[2];
     xgid.matchsc = this.kifuEditor.matchLength;
-console.log("firstXgid", xgid.xgidstr);
     return xgid.xgidstr;
   }
 

@@ -73,7 +73,7 @@ class BgKifu {
     });
 
     const replaceandtrim = ((str) => {
-      const str2 = str.replace("ILLEGAL?", "        ");
+      const str2 = str.replace("ILLEGAL?", "????");
       this.kifumat.push(str2.trimEnd());
     });
 
@@ -125,8 +125,8 @@ class BgKifu {
         takedflg = (xgbf.cube != xgaf.cube); //Takeするかどうかはここで確認
       } else if (doubledflg == true) { //Take or Drop
         action = takedflg ? ' Takes' : ' Drops';
-      } else { //Error?;
-        action = 'ERROR?? no action to push';
+      } else { //Resign or Error
+        action = ' Resign';
       }
       actionlist.push(action);
     }

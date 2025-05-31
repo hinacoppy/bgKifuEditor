@@ -287,6 +287,7 @@ console.log("doubleAction", this.xgid.xgidstr);
     this.showScoreInfo();
     const action = "wins " + this.gameEndScore + " point";
     this.xgid.turn = BgUtil.cvtTurnGm2Xg(this.player); //this.player is winner
+    this.xgid.dice = "00";
 console.log("gameendAction", this.player, action, this.xgid.xgidstr);
     this.setGlobalKifuData(this.xgid, action, "gameend");
     this.kifuobj.pushKifuXgid(""); //空行
@@ -909,7 +910,6 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
       clickToSelect: true,
       singleSelect: true,
       height: "200",
-      //widthUnit: "rem",
     };
     return tableOptions;
   }
@@ -924,23 +924,18 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
     const columns = [
       { field: "check",
         checkbox: true,
-        //width: "1",
       },
       { title: "No",
         field: "no",
-        //width: "1",
       },
       { title: "Player",
         field: "player",
-        //width: "4",
       },
       { title: "Dice",
         field: "dice",
-        //width: "3",
       },
       { title: "Action",
         field: "action",
-        //width: "50",
       },
       { title: "Edit",
         events: operateEvents,
@@ -955,9 +950,9 @@ console.log("execEditButtonAction ", index, row);
     this.ViewerModeFlag = false;
     this.curRollNo = index;
     this.checkOnKifuRow(index);
-    this.xgid = new Xgid(row.bfxgid);
-    const mode = row.mode;
-    this.editCurrentPosition(mode);
+    const bfxgid = this.globalKifuData[row.gameno].playObject[index].bfxgid;
+    this.xgid = new Xgid(bfxgid);
+    this.editCurrentPosition(row.mode);
   }
 
   editCurrentPosition(mode) {
@@ -998,29 +993,22 @@ console.log("setGlobalKifuData", xgid.xgidstr, action, mode);
 
 console.log("setGlobalKifuData", this.globalKifuData[gameno].playObject.length, playno);
 console.log("setGlobalKifuData", newPlayObj);
-    if (this.globalKifuData[gameno].playObject.length -1 > playno) {
+    if (this.globalKifuData[gameno].playObject.length > playno) {
+//console.log("setGlobalKifuData", true);
       this.globalKifuData[gameno].playObject[playno] = newPlayObj;
       this.updateKifuTable(newPlayObj);
     } else {
+//console.log("setGlobalKifuData", false);
       this.globalKifuData[gameno].playObject.push(newPlayObj); //行が増えたときは
       this.makeTableData(); //テーブルデータを作り直してテーブル再表示
     }
 
-    const nextbfxgid = this.globalKifuData[gameno].playObject[playno +1].bfxgid;
-    const afterxgid = this.makeNextBeforeXgid(nextbfxgid, xgidstr);
-    this.globalKifuData[gameno].playObject[playno +1].bfxgid = afterxgid;
-
     if (mode != "gameend") {
       this.curRollNo += 1; //gameendのときは次行に行かない
     }
-    this.checkOnKifuRow(this.curRollNo);
-  }
-
-  makeNextBeforeXgid(nextxgid, afterxgid) {
-    const nextXgid = new Xgid(nextxgid);
-    const afterXgid = new Xgid(afterxgid);
-    nextXgid.position = afterXgid.position;
-    return nextXgid.xgidstr;
+    const checkline = Math.min(this.curRollNo, this.globalKifuData[gameno].playObject.length -1);
+//console.log("setGlobalKifuData", mode, this.curRollNo, checkline, this.globalKifuData[gameno].playObject.length);
+    this.checkOnKifuRow(checkline);
   }
 
   updateKifuTable(playobj) {
@@ -1034,9 +1022,9 @@ console.log("setGlobalKifuData", newPlayObj);
     this.kifuTable.bootstrapTable("updateCell", action);
   }
 
-  checkOnKifuRow(index) {
-    const check = { index: this.curRollNo, field: "check", value: true, };
-    const scrollto = { unit: "rows", value: Math.max(this.curRollNo - 1, 0) };
+  checkOnKifuRow(checkline) {
+    const check = { index: checkline, field: "check", value: true, };
+    const scrollto = { unit: "rows", value: Math.max(checkline - 1, 0) };
     this.kifuTable.bootstrapTable("uncheckAll");
     this.kifuTable.bootstrapTable("updateCell", check);
     //this.kifuTable.bootstrapTable("scrollTo", scrollto); //行選択時に直感的な動きをしないので使いにくい
@@ -1045,21 +1033,23 @@ console.log("setGlobalKifuData", newPlayObj);
   makeTableData() {
     const kfobject = this.parseGameKifu(); //棋譜表示テーブルに差し込むデータを作る
     this.kifuTable.bootstrapTable("load", kfobject); //テーブルに差し込む
+    this.kifuTable.bootstrapTable("scrollTo", "bottom");
   }
 
   parseGameKifu() {
 console.log("parseGameKifu()");
     let kifutableobject = [];
+    const playerColor = [null, "WHITE", "BLUE"];
     for (const go of this.globalKifuData) {
       let no = 1; //Noは1始まり
       for (const po of go.playObject) {
         const kto = {
           no:     no,
-          player: (po.turn == 1) ? "WHITE" : "BLUE", //po.turn == 2 -> BLUE
+          player: playerColor[po.turn],
           dice:   (po.dice == "00" || po.dice == "D") ? "" : po.dice,
-          mode:   po.mode,
           action: po.disp,
-          bfxgid: po.bfxgid,
+          //bfxgid: po.bfxgid,
+          mode:   po.mode,
           gameno: go.game,
         };
         kifutableobject.push(kto);
@@ -1210,6 +1200,7 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     const cfplayer = this.xgid.getCrawfordPlayer();
     const scr1 = this.globalKifuData[gamenum].score1 + ((cfplayer == +1) ? "*" : "");
     const scr2 = this.globalKifuData[gamenum].score2 + ((cfplayer == -1) ? "*" : "");
+    this.score = [null, this.globalKifuData[gamenum].score1, this.globalKifuData[gamenum].score2];
     this.score1.text(scr1);
     this.score2.text(scr2);
 console.log("initGame", 0, gamenum);
