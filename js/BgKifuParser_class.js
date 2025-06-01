@@ -15,14 +15,15 @@ class BgKifuParser {
     let getplayerflag = false;
     let gameCount = 0;
     let lineno = 0;
-    let playername = [null, "top", "bottom"];
+    let playername = [null, "bottom", "top"];
+    this.matchLength = 5;
 
     const gamesourceArray = gamesource.split("\n");
     for (const line of gamesourceArray) {
       lineno += 1;
       const linetrim = line.trim();
       if (linetrim.match(/point match/)) {
-        this.kifuEditor.matchLength = Number(linetrim.substring(0, linetrim.indexOf(" ")));
+        this.matchLength = Number(linetrim.substring(0, linetrim.indexOf(" ")));
       }
       if (line.substring(0, 6) == " Game ") {
         gameCount += 1;
@@ -58,8 +59,8 @@ console.log("gameCount", gameCount);
     }
 console.log("globalKifudata", JSON.stringify(globalKifudata));
 console.log("globalKifudata.length", globalKifudata.length);
-    this.kifuEditor.playername = playername; //上位オブジェクトの変数に登録
-    this.kifuEditor.gameCount = gameCount;
+    this.playername = playername;
+    this.gameCount = gameCount;
     return globalKifudata;
   }
 
@@ -177,17 +178,17 @@ console.log("gameBlock", blockStart, gameObj.length);
     return playObject;
   }
 
-  makePlayObj(tn, mode, dc, mv, cb, xg, af, disp, gameno) {
+  makePlayObj(turn, mode, dice, mv, cube, xgid, af, action, gameno) {
     const playobj = {
-      "turn": tn,
-      "mode": mode,
-      "dice": dc,
-      "cube": cb,
-      "move": mv,
-      "bfxgid": xg,
-      "xgid": af,
-      "disp": disp,
       "gameno": gameno,
+      "turn": turn,
+      "mode": mode,
+      "dice": dice,
+      "cube": cube,
+      "action": action,
+      "xgid": xgid,
+      //"move": mv,
+      //"xgid": af,
     };
     return playobj;
   }
@@ -210,7 +211,7 @@ console.log("gameBlock", blockStart, gameObj.length);
     xgid.crawford = this.crawford;
     xgid.sc_me = this.score[1];
     xgid.sc_yu = this.score[2];
-    xgid.matchsc = this.kifuEditor.matchLength;
+    xgid.matchsc = this.matchLength;
     return xgid.xgidstr;
   }
 
