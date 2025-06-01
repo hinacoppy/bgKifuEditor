@@ -1110,11 +1110,11 @@ console.log("inputKifuFile", this.inputKifuFile.val());
     this.ViewerModeFlag = true;
     this.hideAllPanel(); //ViewerModeではパネルを非表示に
     this.checkOnKifuRow(this.curRollNo);
-    this.showBoard(this.curRollNo);
+    this.showBoard(this.curGameNo, this.curRollNo);
   }
 
-  showBoard(playnum) {
-    const po = this.globalKifuData[this.curGameNo].playObject[playnum];
+  showBoard(gameno, rollno) {
+    const po = this.globalKifuData[gameno].playObject[rollno];
     this.xgid = new Xgid(po.xgid);
     this.showBoard2(this.xgid);
   }
