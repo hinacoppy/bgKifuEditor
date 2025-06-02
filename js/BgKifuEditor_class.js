@@ -15,7 +15,6 @@ class BgKifuEditor {
     this.board = new BgBoard("#board", false);
     this.board.showBoard2(this.xgid);
     this.kifuobj = new BgKifu(true);
-    this.kifuParser = new BgKifuParser(this);
     this.player = true; //true=player1, false=player2
     this.strictflg = true;
     this.animDelay = 500; //cube, dice
@@ -252,10 +251,10 @@ console.log("doubleAction", this.xgid.xgidstr);
     this.swapTurn();
     this.xgid.dice = "00";
     this.xgid.cubepos = this.xgid.turn;
-    this.board.showBoard2(this.xgid);
+    this.xgid.cube += 1; //キューブの値を変えるのはglobalKifuData設定前で画面表示前
     this.kifuobj.pushKifuXgid(this.xgid.xgidstr);
     this.setGlobalKifuData(this.xgid, " Takes", "take");
-    this.xgid.cube += 1; //キューブの値を変えるのは画面表示後
+    this.board.showBoard2(this.xgid);
     this.swapXgTurn(); //XGのturnを変えるのは棋譜用XGID出力後
     this.hideAllPanel();
     this.showRollDoublePanel(this.player);
@@ -396,7 +395,10 @@ console.log("gameendAction", this.player, action, this.xgid.xgidstr);
       break;
     case "doneundo": //done undo時は、Enter, Space, Escを受け付ける
       if (key == "Enter" || key == " ") {
-        this.doneAction();
+        if (this.xgid.moveFinished()) { //押せるのはムーブ完了時のみ
+          //known bug:forcedMoveの後はthis.xgid.moveFinished()がfalseを返すのでEnterが押せない。マウス操作で対応できるので放置
+          this.doneAction();
+        }
       } else if (key == "Escape") {
         this.undoAction();
       } else if (this.forcedflg && key == "f") { //フォーストのときは f を受け付ける
@@ -897,10 +899,6 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
 
 //★★ここからKifuViewerのコード
   prepareKifuTable() {
-    this.kifuTable.bootstrapTable(this.setTableOptions());
-  }
-
-  setTableOptions() {
     const tableOptions = { //bootstrapTable config
       url: null, //棋譜ファイルロード後に表示するため、作成時は空
       columns: this.getKifuTableColumns(),
@@ -911,7 +909,7 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
       singleSelect: true,
       height: "200",
     };
-    return tableOptions;
+    this.kifuTable.bootstrapTable(tableOptions);
   }
 
   getKifuTableColumns() {
@@ -951,16 +949,17 @@ console.log("execEditButtonAction ", index, row);
     this.curRollNo = index;
     this.checkOnKifuRow(index);
     const xgid = this.globalKifuData[row.gameno].playObject[index].xgid;
-    this.xgid = new Xgid(xgid);
-    this.editCurrentPosition(row.mode);
+    this.editCurrentPosition(row.mode, xgid);
   }
 
-  editCurrentPosition(mode) {
+  editCurrentPosition(mode, xgid) {
+    this.xgid = new Xgid(xgid);
     this.player = BgUtil.cvtTurnXg2Gm(this.xgid.turn);
     switch(mode) {
     case "roll":
       this.xgid.dice = "00";
-      this.showBoard2(this.xgid);
+      this.showPipInfo();
+      this.board.showBoard2(this.xgid);
       this.unsetChequerDraggable();
       this.hideAllPanel();
       this.showRollDoublePanel(this.player);
@@ -989,16 +988,14 @@ console.log("setGlobalKifuData", xgid.xgidstr, action, mode);
     const turn = BgUtil.cvtTurnXg2kv(xgid.turn);
     const dice = xgid.dice;
     const cube = xgid.cube;
-    const newPlayObj = this.kifuParser.makePlayObj(turn, mode, dice, action, cube, xgidstr, xgidstr, action, gameno);
+    const newPlayObj = this.makePlayObj(gameno, turn, mode, dice, cube, action, xgidstr);
 
 console.log("setGlobalKifuData", this.globalKifuData[gameno].playObject.length, playno);
 console.log("setGlobalKifuData", newPlayObj);
     if (this.globalKifuData[gameno].playObject.length > playno) {
-//console.log("setGlobalKifuData", true);
       this.globalKifuData[gameno].playObject[playno] = newPlayObj;
       this.updateKifuTable(newPlayObj);
     } else {
-//console.log("setGlobalKifuData", false);
       this.globalKifuData[gameno].playObject.push(newPlayObj); //行が増えたときは
       this.makeTableData(); //テーブルデータを作り直してテーブル再表示
     }
@@ -1007,8 +1004,7 @@ console.log("setGlobalKifuData", newPlayObj);
       this.curRollNo += 1; //gameendのときは次行に行かない
     }
     const checkline = Math.min(this.curRollNo, this.globalKifuData[gameno].playObject.length -1);
-//console.log("setGlobalKifuData", mode, this.curRollNo, checkline, this.globalKifuData[gameno].playObject.length);
-    this.checkOnKifuRow(checkline);
+    this.checkOnKifuRow(checkline); //次行を選択
   }
 
   updateKifuTable(playobj) {
@@ -1061,7 +1057,8 @@ console.log("parseGameKifu()");
 
   setEventHandlerForKifuViewer() {
     this.goGameBtn.on("click", () => {
-      this.jumpToGame();
+      this.curGameNo = Number(this.gameSelect.val());
+      this.initGame(this.curGameNo);
     });
     this.kifuTable.on("check.bs.table", (e, row, elem) => {
 console.log("this.kifuTable on check", row.no, row);
@@ -1114,15 +1111,10 @@ console.log("inputKifuFile", this.inputKifuFile.val());
   }
 
   showBoard(gameno, rollno) {
-    const po = this.globalKifuData[gameno].playObject[rollno];
-    this.xgid = new Xgid(po.xgid);
-    this.showBoard2(this.xgid);
-  }
-
-  showBoard2(xgid) {
-    this.board.showBoard2(xgid);
-    this.pip1.text(xgid.get_pip(1));
-    this.pip2.text(xgid.get_pip(-1));
+    const xgid = this.globalKifuData[gameno].playObject[rollno].xgid;
+    this.xgid = new Xgid(xgid);
+    this.showPipInfo();
+    this.board.showBoard2(this.xgid);
   }
 
   downloadKifuAction() {
@@ -1135,9 +1127,7 @@ console.log("inputKifuFile", this.inputKifuFile.val());
       this.kifuobj.pushKifuXgid(""); //ゲーム境界には空を挟む
     }
 
-//console.log("downloadKifuAction", JSON.stringify(this.kifuobj.xgidarray));
     const downloadfilename = this.makeDownloadFilename(this.kifuFileName);
-console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     this.kifuobj.downloadKifuAction(downloadfilename);
   }
 
@@ -1167,10 +1157,11 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     //読込終了後の処理
     reader.onload = () => { //アロー関数で記述すれば、thisがそのまま使える
       const kifudata = reader.result;
-      this.globalKifuData = this.kifuParser.parseKifuDataAll(kifudata); //棋譜ファイルを読んでデータ(オブジェクト)作成
-      this.playername = this.kifuParser.playername; //KifuParserクラスで作ったデータを読み込む
-      this.matchLength = this.kifuParser.matchLength;
-      const gameCount = this.kifuParser.gameCount;
+      const globalKifuDataAll = new BgKifuParser(kifudata); //棋譜ファイルを読んで棋譜データオブジェクト作成
+      this.globalKifuData = globalKifuDataAll.globalKifuData; //棋譜データオブジェクトを展開
+      this.playername = globalKifuDataAll.playerName;
+      this.matchLength = globalKifuDataAll.matchLength;
+      const gameCount = globalKifuDataAll.gameCount;
       this.setGameSelection(gameCount); //selectタグデータ作成
       this.makeTableData(); //棋譜テーブル作成
       this.curGameNo = 0;
@@ -1186,17 +1177,12 @@ console.log("downloadKifuAction", downloadfilename, this.kifuFileName);
     }
   }
 
-  jumpToGame() {
-    this.curGameNo = Number(this.gameSelect.val());
-    this.initGame(this.curGameNo);
-  }
-
   initGame(gamenum) {
     this.curRollNo = 0;
     this.kifuTable.bootstrapTable("filterBy", {gameno: [gamenum]}); //棋譜テーブルで見せるデータを入替え
     this.score = [null, this.globalKifuData[gamenum].score1, this.globalKifuData[gamenum].score2];
-    this.setIntoViewerMode(); //ここでボード表示もやる
-    this.dispGameInfo(); //ゲーム情報はボード表示(this.xgidの設定)の後
+    this.setIntoViewerMode(); //ここでthis.xgidの設定とボード表示もやる
+    this.dispGameInfo(); //ゲーム情報はthis.xgidの設定の後
 console.log("initGame", 0, gamenum);
   }
 
@@ -1205,11 +1191,20 @@ console.log("initGame", 0, gamenum);
     this.player2.text(this.playername[2]);
     this.matchlen1.text(this.matchLength);
     this.matchlen2.text(this.matchLength);
-    const cfplayer = this.xgid.getCrawfordPlayer();
-    const scr1 = this.score[1] + ((cfplayer == +1) ? "*" : "");
-    const scr2 = this.score[2] + ((cfplayer == -1) ? "*" : "");
-    this.score1.text(scr1);
-    this.score2.text(scr2);
+    this.showScoreInfo();
+  }
+
+  makePlayObj(gameno, turn, mode, dice, cube, action, xgid) {
+    const playobj = {
+      "gameno": gameno,
+      "turn": turn,
+      "mode": mode,
+      "dice": dice,
+      "cube": cube,
+      "action": action,
+      "xgid": xgid,
+    };
+    return playobj;
   }
 
 }

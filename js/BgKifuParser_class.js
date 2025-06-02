@@ -2,28 +2,35 @@
 "use strict";
 
 class BgKifuParser {
-  constructor(kifuEditor) {
-    this.kifuEditor = kifuEditor;
-  }
-
-  parseKifuDataAll(gamesource) {
+  constructor(gamesource) {
+    //Class Variables
+    this.matchLength = 0;
+    this.separateColumn = 40;
     this.crawford = false;
     this.cubeBefore = 1; // =2^0
     this.gameLines = [];
-    let globalKifudata = [];
+    return this.parseKifuDataAll(gamesource); //棋譜データの解析結果オブジェクトを返す
+  }
+
+  parseKifuDataAll(gamesource) {
+    let globalKifuDataAll = {
+      matchLength: 0,
+      gameCount: 0,
+      playerName: [null, "bottom", "top"],
+      globalKifuData: [],
+    };
+
     let gamelineflag = false;
     let getplayerflag = false;
     let gameCount = 0;
     let lineno = 0;
-    let playername = [null, "bottom", "top"];
-    this.matchLength = 5;
-
     const gamesourceArray = gamesource.split("\n");
     for (const line of gamesourceArray) {
       lineno += 1;
       const linetrim = line.trim();
       if (linetrim.match(/point match/)) {
         this.matchLength = Number(linetrim.substring(0, linetrim.indexOf(" ")));
+        globalKifuDataAll.matchLength = this.matchLength;
       }
       if (line.substring(0, 6) == " Game ") {
         gameCount += 1;
@@ -37,7 +44,7 @@ console.log("Game ", line, lineno);
         const ary = BgUtil.insertStr(line, this.separateColumn, ":").split(":");
         const player1 = ary[2].trim();
         const player2 = ary[0].trim();
-        playername = [null, player1, player2];
+        globalKifuDataAll.playerName = [null, player1, player2];
         gamelineflag = false;
         getplayerflag = true;
       }
@@ -48,6 +55,7 @@ console.log("Game ", line, lineno);
       return false;
     }
 
+    globalKifuDataAll.gameCount = gameCount;
 console.log("gameCount", gameCount);
     for (let game = 0; game < gameCount; game++) {
       const gameobj = this.parseGameData(gamesource, game);
@@ -55,13 +63,11 @@ console.log("gameCount", gameCount);
         alert("Error in parseGameData - no gameplay lines");
         return false;
       }
-      globalKifudata.push(gameobj);
+      globalKifuDataAll.globalKifuData.push(gameobj);
     }
-console.log("globalKifudata", JSON.stringify(globalKifudata));
-console.log("globalKifudata.length", globalKifudata.length);
-    this.playername = playername;
-    this.gameCount = gameCount;
-    return globalKifudata;
+
+console.log("globalKifuDataAll", JSON.stringify(globalKifuDataAll));
+    return globalKifuDataAll;
   }
 
   getSeparateColumn(line) {
@@ -94,7 +100,7 @@ console.log("playernameline ", playernameline);
 
     // Now create serialised plays array
     const gameBlock = gameObj.slice(blockStart, gameObj.length - 1);
-console.log("gameBlock", blockStart, gameObj.length);
+//console.log("gameBlock", blockStart, gameObj.length);
     let plays = [];
     for (const line of gameBlock) {
       const indexof = line.indexOf(";");
