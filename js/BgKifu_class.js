@@ -126,7 +126,7 @@ class BgKifu {
       } else if (doubledflg == true) { //Take or Drop
         action = takedflg ? ' Takes' : ' Drops';
       } else { //Resign or Error
-        action = ' Resign';
+        action = this.makeResignAction(xgbf);
       }
       actionlist.push(action);
     }
@@ -160,6 +160,17 @@ class BgKifu {
     const scoreinfo = notmatched ? ' Wins ' + getscr + ' point'
                                  : ' Wins ' + winnerscr + ' point and the match';
     return scoreinfo;
+  }
+
+  makeResignAction(xglast) {
+    const delta1 = xglast.get_sc_me() - this.score[1];
+    const delta2 = xglast.get_sc_yu() - this.score[2];
+    const getscr = Math.max(delta1, delta2);
+    const cubeval = BgUtil.calcCubeVal(xglast.cube);
+    const resignval = getscr / cubeval;
+    const resign = ["", "Single", "Gammon", "BackGammon"];
+    const resignaction = " Resign " + resign[resignval];
+    return resignaction;
   }
 
   make_moveaction(xgbf, xgaf) {
