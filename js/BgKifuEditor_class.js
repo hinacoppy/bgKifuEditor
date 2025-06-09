@@ -428,7 +428,9 @@ console.log("gameendAction", this.player, action, this.xgid.xgidstr);
     this.xgid.dice = "00";
     this.calcScore(this.player, true); //第2引数が true のときはリザイン
     this.board.showBoard2(this.xgid);
-    this.setGlobalKifuData(this.xgid, " Resign", "resign");
+    const resign = ["", "Single", "Gammon", "BGammon"];
+    const action = " Resign " + resign[this.gamescore[1]];
+    this.setGlobalKifuData(this.xgid, action, "resign");
     this.kifuobj.pushKifuXgid(this.xgid.xgidstr);
     this.hideAllPanel();
     this.showGameEndPanel(this.player);
@@ -478,6 +480,7 @@ console.log("gameendAction", this.player, action, this.xgid.xgidstr);
 
   calcScore(player, resignflag = false) {
     const resignscore = Number($("input[name='resign']:checked").val());
+    this.score = [null, this.xgid.sc_me, this.xgid.sc_yu]; //ここでセットしないとリザイン時のスコアがおかしくなる
     this.gamescore = this.xgid.get_gamesc( BgUtil.cvtTurnGm2Xg(player) );
     const w = BgUtil.cvtTurnGm2Bd( player);
     const l = BgUtil.cvtTurnGm2Bd(!player);
@@ -530,7 +533,8 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
   }
 
   makeGameEndPanel(player) {
-    const playername = player ? this.player1.val() : this.player2.val();
+    //const playername = player ? this.player1.val() : this.player2.val();
+    const playername = player ? this.playername[1] : this.playername[2];
     const mes1 = playername + " WIN" + ((this.matchwinflg) ? "<br>and the MATCH" : "");
     const mes1dash = "You WIN" + ((this.matchwinflg) ? " and the MATCH" : "");
     this.showActionStr(player, mes1dash);
@@ -1000,11 +1004,65 @@ console.log("setGlobalKifuData", newPlayObj);
       this.makeTableData(); //テーブルデータを作り直してテーブル再表示
     }
 
+    if (mode == "gameend") {
+      this.recalcGameScore(xgid); //スコアに変化があった時用に以降のゲームスコアを再計算(変化なくても再計算)
+console.log("globalKifuData", JSON.stringify(this.globalKifuData));
+    }
+
     if (mode != "gameend") {
       this.curRollNo += 1; //gameendのときは次行に行かない
     }
     const checkline = Math.min(this.curRollNo, this.globalKifuData[gameno].playObject.length -1);
     this.checkOnKifuRow(checkline); //次行を選択
+  }
+
+  recalcGameScore(xgid) {
+    //スコアの増分を確認
+    let diffScr1 = [];
+    let diffScr2 = [];
+    for (const gameobj of this.globalKifuData) {
+      const playlength = gameobj.playObject.length;
+      const last1xg = gameobj.playObject[playlength -1].xgid; //増分は最後2つのXGIDから分かる
+      const last2xg = gameobj.playObject[playlength -2].xgid;
+      const last1xgid = new Xgid(last1xg);
+      const last2xgid = new Xgid(last2xg);
+      diffScr1.push(last1xgid.sc_me - last2xgid.sc_me);
+      diffScr2.push(last1xgid.sc_yu - last2xgid.sc_yu);
+    }
+
+    let curScr1 = xgid.sc_me;
+    let curScr2 = xgid.sc_yu;
+    for (let gameno =  this.curGameNo +1; gameno < this.globalKifuData.length; gameno++) { //編集するのは以降のゲームだけ
+      this.globalKifuData[gameno].score1 = curScr1;
+      this.globalKifuData[gameno].score2 = curScr2;
+      this.globalKifuData[gameno].crawford = this.checkCrawford(curScr1, curScr2, this.matchLength);
+      curScr1 += diffScr1[gameno];
+      curScr2 += diffScr2[gameno];
+
+      //this.globalKifuDataに保持するxgidも編集する
+      const playlength = this.globalKifuData[gameno].playObject.length;
+      for (let playno = 0; playno < playlength -1; playno++) { //gameendまでのスコア登録
+        const xg = this.globalKifuData[gameno].playObject[playno].xgid;
+        const xgid = new Xgid(xg);
+        xgid.sc_me = this.globalKifuData[gameno].score1;
+        xgid.sc_yu = this.globalKifuData[gameno].score2;
+        xgid.crawford = this.globalKifuData[gameno].crawford;
+        this.globalKifuData[gameno].playObject[playno].xgid = xgid.xgidstr;
+      }
+      //gameendのときのスコア登録(次のゲームへの増分を登録)
+      const xg = this.globalKifuData[gameno].playObject[playlength -1].xgid;
+      const xgid = new Xgid(xg);
+      xgid.sc_me = this.globalKifuData[gameno].score1 + diffScr1[gameno];
+      xgid.sc_yu = this.globalKifuData[gameno].score2 + diffScr2[gameno];
+      xgid.crawford = this.globalKifuData[gameno].crawford;
+      this.globalKifuData[gameno].playObject[playlength -1].xgid = xgid.xgidstr;
+    }
+  }
+
+  checkCrawford(scr1, scr2, matchlength) {
+    const lastonepoint = matchlength == Math.max(scr1, scr2) + 1;
+    const crawford = (scr1 != scr2) && lastonepoint;
+    return crawford;
   }
 
   updateKifuTable(playobj) {
@@ -1180,7 +1238,7 @@ console.log("inputKifuFile", this.inputKifuFile.val());
   initGame(gamenum) {
     this.curRollNo = 0;
     this.kifuTable.bootstrapTable("filterBy", {gameno: [gamenum]}); //棋譜テーブルで見せるデータを入替え
-    this.score = [null, this.globalKifuData[gamenum].score1, this.globalKifuData[gamenum].score2];
+    //this.score = [null, this.globalKifuData[gamenum].score1, this.globalKifuData[gamenum].score2];
     this.setIntoViewerMode(); //ここでthis.xgidの設定とボード表示もやる
     this.dispGameInfo(); //ゲーム情報はthis.xgidの設定の後
 console.log("initGame", 0, gamenum);

@@ -94,6 +94,7 @@ console.log("gameObj.length ", gameNo, gameObj.length);
       game: gameNo,
       score1: 0,
       score2: 0,
+      crawford: false,
       playObject: [],
     };
 
@@ -101,6 +102,7 @@ console.log("gameObj.length ", gameNo, gameObj.length);
     this.score = [null, scr1, scr2];
     gameObject.score1 = scr1;
     gameObject.score2 = scr2;
+    gameObject.crawford = this.checkCrawford(scr1, scr2, this.matchLength);
 
     const blockStart = BgUtil.findLine(gameObj, "1)");
     if (blockStart < 0) {
@@ -272,6 +274,12 @@ console.log("gameObj.length ", gameNo, gameObj.length);
     const xgscoreyu = xgscr2[0] * xgscr2[1];
     const score = dropflag ? cubevalue : Math.max(xgscoreme, xgscoreyu);
     return score
+  }
+
+  checkCrawford(scr1, scr2, matchlength) {
+    const lastonepoint = matchlength == Math.max(scr1, scr2) + 1;
+    const crawford = (scr1 != scr2) && lastonepoint;
+    return crawford;
   }
 
 }
