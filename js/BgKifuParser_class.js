@@ -73,14 +73,18 @@ console.log("globalKifuDataAll", JSON.stringify(globalKifuDataAll));
     const sep1 = line.indexOf("    ") + 1;
     const ary = BgUtil.insertStr(line, sep1, ":").split(":");
     const player1 = ary[2].trim();
-    const sep2 = line.indexOf(player1) - 2;　//player1の名前の2文字前(tsuneさんの棋譜エディタの出力に対応)
+    const sep3 = line.indexOf(player1);
+    const gap = (sep3 > 38) ? 1 : 0;　//player1の名前が38カラムより後ろなら、2文字前(tsuneさんの棋譜エディタの出力に対応)
+                                      //普通は1文字前(002-gnubg-BGBlitz-1.txtの40行目の問題に対応)
+    const sep2 = sep3 - gap;
 console.log("getSeparateColumn '"+ line + "'", sep1, player1, sep2);
     return sep2;
   }
 
   getPlayerAndScore(playerscoreline, separateColumn) {
-console.log("playerscoreline ", playerscoreline);
+console.log("playerscoreline ", playerscoreline, separateColumn);
     const ary = BgUtil.insertStr(playerscoreline, separateColumn, ":").split(":");
+console.log("playerscoreline ", BgUtil.insertStr(playerscoreline, separateColumn, ":"));
     const player1 = ary[2].trim();
     const player2 = ary[0].trim();
     const score1 = Number(ary[3].trim());
@@ -117,7 +121,7 @@ console.log("gameObj.length ", gameNo, gameObj.length);
       const pl = indexof >= 0 ? line.substring(0, indexof) : line;
       const st = line.indexOf(")") + 1;
       plays.push(pl.substring(st, this.separateColumn).trim()); //)の次から
-      plays.push(pl.substring(this.separateColumn +1).trim()); //player1の名前から--end
+      plays.push(pl.substring(this.separateColumn).trim()); //player1の名前から--end
     }
     gameObject.playObject = this.parsePlay(plays, gameNo);
 
@@ -133,7 +137,7 @@ console.log("gameObj.length ", gameNo, gameObj.length);
 
     let i = 0;
     for (const k of plays) {
-      const tn = (i % 2 == 0) ? 1 : 2;  //bottom side = 2, top side = 1
+      const tn = (i % 2 == 0) ? 2 : 1; //bottom side(left) = 1, top side(right) = 2
 
       switch( this.chkAction(k) ) {
       case "ROLL":
@@ -141,32 +145,33 @@ console.log("gameObj.length ", gameNo, gameObj.length);
         e = k.indexOf(":");
         dc = k.substr(e-2,2);
         ac = k.substr(e+1).trim();
-        if (ac == "") { ac = "????"; }
+        if (ac == "") { ac = "Cannot Move"; }
         xg = this.nextXgid(bf, tn, mode, dc, "", 0); // ロール後(ムーブ前)のXGIDを計算する(解析(move action)に渡す用)
         af = this.nextXgid(bf, tn, "move", dc, ac, 0); // ムーブ後のXGIDを計算する(画面表示用)
-        po = this.makePlayObj(gameno, tn, mode, dc, 0, ac, xg);
+        po = this.makePlayObj(gameno, tn, mode, dc, 0, ac, xg, af);
         break;
       case "DOUBLE":
         mode = "offer";
         s1 = k.trim();
         s2 = parseInt(s1.substr(s1.lastIndexOf(" ")));
-        xg = this.nextXgid(bf, tn, mode, "00", "", this.cubeBefore); //解析(cube action)に渡す用
-        af = this.nextXgid(bf, tn, mode, "D", "", s2); //画面表示用
+        xg = this.nextXgid(bf, tn, mode, "D", "", this.cubeBefore); //解析(cube action)に渡す用
+        af = this.nextXgid(bf, tn, mode, "00", "", s2); //画面表示用
+        //afの作り方がKifuEditorとKifuViewerで異なる（ToDo：合わせたい）
         ac = " Doubles => " + s2;
-        po = this.makePlayObj(gameno, tn, mode, "D", s2, ac, xg);
+        po = this.makePlayObj(gameno, tn, mode, "D", s2, ac, xg, af);
         break;
       case "TAKE":
         mode = "take";
         af = xg = this.nextXgid(bf, tn, mode, "00", "", s2);
         ac = " Takes";
-        po = this.makePlayObj(gameno, tn, mode, "00", s2, ac, xg);
+        po = this.makePlayObj(gameno, tn, mode, "00", s2, ac, xg, af);
         this.cubeBefore = s2;
         break;
       case "DROP":
         mode = "drop";
         af = xg = this.nextXgid(bf, tn, mode, "00", "", this.cubeBefore, true);
         ac = " Drops";
-        po = this.makePlayObj(gameno, tn, mode, "00", 0, ac, xg);
+        po = this.makePlayObj(gameno, tn, mode, "00", 0, ac, xg, af);
         break;
       case "OTHER":
         const dropflag = (mode == "drop"); //ここに来る直前のmodeを確認
@@ -177,7 +182,7 @@ console.log("gameObj.length ", gameNo, gameObj.length);
         //const sc = BgUtil.calcCubeVal(xgtmp.cube); // 3 => 8
         const sc = this.calcGamesetScore(dropflag, xgtmp);
         ac = "wins " + sc + " point";
-        po = this.makePlayObj(gameno, tn, mode, "00", 0, ac, xg);
+        po = this.makePlayObj(gameno, tn, mode, "00", 0, ac, xg, af);
         break;
       default: // "NULL"
         ac = "";
@@ -192,7 +197,7 @@ console.log("gameObj.length ", gameNo, gameObj.length);
     return playObject;
   }
 
-  makePlayObj(gameno, turn, mode, dice, cube, action, xgid) {
+  makePlayObj(gameno, turn, mode, dice, cube, action, xgid, xgaf) {
     const playobj = {
       gameno: gameno,
       turn: turn,
@@ -201,6 +206,7 @@ console.log("gameObj.length ", gameNo, gameObj.length);
       cube: cube,
       action: action,
       xgid: xgid,
+      xgaf: xgaf,
     };
     return playobj;
   }
@@ -229,7 +235,7 @@ console.log("gameObj.length ", gameNo, gameObj.length);
 
   nextXgid(bf, tn, mode, dc, mv, cb, dropflag = false) {
     const xgid = new Xgid(bf);
-    xgid.turn = BgUtil.cvtTurnKv2xg(tn); //tn==1 -> xgid.turn = -1, tn==2 -> xgid.turn = 1
+    xgid.turn = BgUtil.cvtTurnBd2Xg(tn); //tn==1 -> xgid.turn = 1, tn==2 -> xgid.turn = -1
     switch (mode) {
     case "roll":
       xgid.dice = dc;
@@ -239,9 +245,10 @@ console.log("gameObj.length ", gameNo, gameObj.length);
       xgid.position = xgid.getMovedPosition(xgid.position, mv, xgid.turn);
       break;
     case "offer":
+      xgid.dice = dc;
       xgid.cube = BgUtil.calcCubeValRev(cb); // 8 => 3
-      xgid.cubepos = BgUtil.cvtTurnKv2xg(BgUtil.getBdOppo(tn));
-      xgid.dbloffer = true;
+      xgid.cubepos = BgUtil.cvtTurnBd2Xg(BgUtil.getBdOppo(tn));
+      xgid.dbloffer = (dc == "D");
       break;
     case "take":
       xgid.dbloffer = false;
@@ -253,11 +260,11 @@ console.log("gameObj.length ", gameNo, gameObj.length);
     case "gameend":
       const mode = "gameend";
       const sc = this.calcGamesetScore(dropflag, xgid)
-      const winnerscr = (tn == 2) ? xgid.sc_me : xgid.sc_yu;
-      const loserscr  = (tn == 2) ? xgid.sc_yu : xgid.sc_me;
+      const winnerscr = (tn == 1) ? xgid.sc_me : xgid.sc_yu;
+      const loserscr  = (tn == 1) ? xgid.sc_yu : xgid.sc_me;
       this.crawford = xgid.checkCrawford(winnerscr, sc, loserscr);
       xgid.dice = "00";
-      if (tn == 2) { xgid.sc_me += sc; }
+      if (tn == 1) { xgid.sc_me += sc; }
       else         { xgid.sc_yu += sc; }
       break;
     default:
