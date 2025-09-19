@@ -87,6 +87,7 @@ class BgKifuEditor {
     this.nextPlayBtn    = $("#nextPlayBtn");
     this.autoPlayBtn    = $("#autoPlayBtn");
     this.goGameBtn      = $("#gameGoBtn");
+    this.showinsert     = $("#showinsert");
 
     //chequer
     this.chequerall  = $(".chequer");
@@ -922,6 +923,12 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
     const operateEvents = {
       "click .edit": (e, value, row, index) => {
         this.execEditButtonAction(e, value, row, index);
+      },
+      "click .insert": (e, value, row, index) => {
+        this.execInsertButtonAction(e, value, row, index);
+      },
+      "click .delete": (e, value, row, index) => {
+        this.execDeleteButtonAction(e, value, row, index);
       }
     };
 
@@ -931,6 +938,10 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
       },
       { title: "No",
         field: "no",
+        visible: false,
+      },
+      { title: "No",
+        field: "dispno",
       },
       { title: "Player",
         field: "player",
@@ -944,6 +955,12 @@ console.log("calcScore", player, resignflag, this.gamescore[0], this.gamescore[1
       { title: "Edit",
         events: operateEvents,
         formatter: "<button class='edit'>Edit</button>",
+      },
+      { title: "Ins/Del",
+        field: "insert",
+        events: operateEvents,
+        formatter: "<button class='insert'>Ins</button><button class='delete'>Del</button>",
+        visible: false,
       },
     ];
     return columns;
@@ -986,6 +1003,36 @@ console.log("execEditButtonAction ", index, row);
       break;
     }
   }
+
+  execInsertButtonAction(e, value, row, index) {
+console.log("execInsertButtonAction ", index, row);
+    const gameno = this.curGameNo;
+    const playno = index;
+    const playObj = this.globalKifuData[gameno].playObject[playno];
+    const xgid = playObj.xgid;
+    const turn = playObj.turn;
+    const oppo = BgUtil.getBdOppo(turn);
+    const dice = "00";
+    const mode = "roll";
+    const action = "????";
+    const cube = playObj.cube;
+    const xgaf = playObj.xgaf;
+    const nextOne = this.makePlayObj(gameno, oppo, mode, dice, cube, action, xgid, xgaf);
+    const nextTwo = this.makePlayObj(gameno, turn, mode, dice, cube, action, xgid, xgaf);
+
+    this.globalKifuData[gameno].playObject.splice(playno + 1, 0, nextOne, nextTwo); //2つを下に差し込み
+    this.makeTableData(); //テーブルデータを作り直してテーブル再表示
+    this.scrollTo(playno + 1);
+  }
+
+  execDeleteButtonAction(e, value, row, index) {
+console.log("execDeleteButtonAction ", index, row);
+    const gameno = this.curGameNo;
+    const playno = index;
+    this.globalKifuData[gameno].playObject.splice(playno, 2); //当該行から2行削除
+    this.makeTableData(); //テーブルデータを作り直してテーブル再表示
+    this.scrollTo(playno);
+ }
 
   setGlobalKifuData(xgid, action, mode) {
 console.log("setGlobalKifuData", xgid.xgidstr, action, mode);
@@ -1117,15 +1164,26 @@ console.log("globalKifuData", JSON.stringify(this.globalKifuData));
     this.kifuTable.bootstrapTable("scrollTo", "bottom");
   }
 
+  calcDispNo(no, frp, poturn, action) {
+    const playerColor = [null, "b", "w"];
+    const actionoffset = action.includes("wins") ? 1 : 0; //勝ち名乗り行は行を下げて記述
+    const offset = frp == 1 ? 2 : 1;
+    const turnno = Math.trunc((no + offset + actionoffset) / 2);
+    const dispno = turnno + playerColor[poturn];
+    return dispno;
+  }
+
   parseGameKifu() {
 console.log("parseGameKifu()");
     let kifutableobject = [];
     const playerColor = [null, "BLUE", "WHITE"];
     for (const go of this.globalKifuData) {
       let no = 1; //Noは1始まり
+      const firstrollplayer = go.playObject[0].turn;
       for (const po of go.playObject) {
         const kto = {
           no:     no,
+          dispno: this.calcDispNo(no, firstrollplayer, po.turn, po.action),
           player: playerColor[po.turn],
           dice:   (po.dice == "00" || po.dice == "D") ? "" : po.dice,
           action: po.action,
@@ -1185,6 +1243,11 @@ console.log("inputKifuFile", this.inputKifuFile.val());
         this.inputKifuFile.prop("files", files);
         this.inputKifuFile.trigger("change"); //ドロップしたらinputタグのchangeイベントを発火
       }
+    });
+    this.showinsert.on("change", (e) => {
+      const checkflag = e.target.checked;
+      const showhide = checkflag ? "showColumn" : "hideColumn";
+      this.kifuTable.bootstrapTable(showhide, "insert"); //Insert列の表示/非表示を切り替える
     });
   }
 
